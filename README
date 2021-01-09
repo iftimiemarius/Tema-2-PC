@@ -1,0 +1,92 @@
+Marius Valentin Iftimie, 323CD
+
+Communication Protocols
+
+Server - Client TCP and UDP application - Message management
+
+
+Usage:
+-> Using binaries
+   -> Server: ./server server_port
+   -> TCP Client: ./subscriber client_id server_address server_port
+
+-> Using Makefile
+   -> Modify CLIENT_ID, SERVER_ADDRESS, SERVER_PORT
+   -> Server: make run_server
+   -> TCP Client: make run_subscriber
+
+
+Packets structure:
+-> UDP packets contain:
+   -> topic - maximum 50 characters string
+   -> data_type - 1 byte containing information about the content which can be:
+      -> 0 - INT
+      -> 1 - SHORT_REAL
+      -> 2 - FLOAT
+      -> 3 - STRING
+   -> content - maximum 1500 bytes
+-> TCP packets contain:
+   -> message - string that contains the final message for the client
+      -> The message is ending in newline
+      -> Form: <IP:PORT> - <TOPIC> - <DATA_TYPE> - <VALUE>
+         -> Example: 127.0.0.1:33445 - a_negative_int - INT - -10
+
+
+Server functionalities:
+-> Receive UDP packets containing a message
+-> Receive TCP packets containing subscribe/unsubscribe options for clients
+-> Process subscription options
+   -> Add / delete clients to topics
+-> Format UDP packets into TCP packets
+-> Send TCP packets containing subscription messages
+
+Server structure:
+-> Singly linked list of topics containing:
+   -> Topic name
+   -> Singly linked list of clients that are subscribed to the topic containing:
+      -> Client ID - String of maximum 10 characters
+      -> The socket file descriptor for the client or 0 if the client is offline
+      -> Store and Forward flag
+      -> Number of unsent messages
+-> Auxiliary arrays containing information about clients containing:
+   -> Client ID
+   -> Client active socket
+
+
+Client functionalities:
+-> Process user input for exit or subscription options
+-> Send TCP packets containing subscription options
+-> Receive TCP packets containing data from the subscribed topics
+
+Client structure:
+-> Simple client structure including checking on the user input
+-> Messages from TCP are printed to console output (stdout)
+
+
+Store and Forward:
+-> Unsent messages will be saved on the disk, and will be removed after they
+   are sent to the subscriber
+-> The directory unsent (UNSENT_MESSAGES) will contain:
+   -> A directory for each id that has been connected to the server
+      that will contain every message sent since the client was last online
+      under the form: "<topic>_<message_id>.msg"
+      -> topic represents the topic to which the client was subscribed
+      -> message_id represents the index of the unsent message
+         -> Will be reset after receiving a message while the client is online
+
+
+Application flow:
+-> Server waits for input - console input (stdin), UDP or TCP using select
+   -> For console input only "exit" command is available to close the server
+   -> For TCP input it will process subscription options
+   -> For UDP input it will process and send packets to the TCP clients
+      -> If the client is not online and has the Store and Forward flag active
+         the packet will be saved on the disk
+
+
+Mentions:
+-> TCP packets contain messages in strings that end in newline so that the
+   client can print them directly because TCP packet concatenation will not
+   affect the visible messages
+-> For the TCP packets, only the string itself will be sent over TCP and stored
+   on the disk
